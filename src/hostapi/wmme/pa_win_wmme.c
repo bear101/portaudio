@@ -200,8 +200,8 @@
 
 #define PA_MME_MIN_TIMEOUT_MSEC_        (1000)
 
-static const char constInputMapperSuffix_[] = " - Input";
-static const char constOutputMapperSuffix_[] = " - Output";
+static const TCHAR constInputMapperSuffix_[] = _T(" - Input");
+static const TCHAR constOutputMapperSuffix_[] = _T(" - Output");
 
 /********************************************************************/
 
@@ -423,21 +423,21 @@ PaWinMmeDeviceInfo;
  * the supplied application "pa_devs".
  */
 #define PA_ENV_BUF_SIZE_  (32)
-#define PA_REC_IN_DEV_ENV_NAME_  ("PA_RECOMMENDED_INPUT_DEVICE")
-#define PA_REC_OUT_DEV_ENV_NAME_  ("PA_RECOMMENDED_OUTPUT_DEVICE")
-static PaDeviceIndex GetEnvDefaultDeviceID( char *envName )
+#define PA_REC_IN_DEV_ENV_NAME_  (_T("PA_RECOMMENDED_INPUT_DEVICE"))
+#define PA_REC_OUT_DEV_ENV_NAME_  (_T("PA_RECOMMENDED_OUTPUT_DEVICE"))
+static PaDeviceIndex GetEnvDefaultDeviceID( TCHAR *envName )
 {
     PaDeviceIndex recommendedIndex = paNoDevice;
     DWORD   hresult;
-    char    envbuf[PA_ENV_BUF_SIZE_];
+    TCHAR    envbuf[PA_ENV_BUF_SIZE_];
 
 #ifndef WIN32_PLATFORM_PSPC /* no GetEnvironmentVariable on PocketPC */
 
     /* Let user determine default device by setting environment variable. */
-    hresult = GetEnvironmentVariableA( envName, envbuf, PA_ENV_BUF_SIZE_ );
+    hresult = GetEnvironmentVariable( envName, envbuf, PA_ENV_BUF_SIZE_ );
     if( (hresult > 0) && (hresult < PA_ENV_BUF_SIZE_) )
     {
-        recommendedIndex = atoi( envbuf );
+        recommendedIndex = _ttoi( envbuf );
     }
 #endif
 
@@ -669,15 +669,15 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
         PaWinMmeDeviceInfo *winMmeDeviceInfo, UINT winMmeInputDeviceId, int *success )
 {
     PaError result = paNoError;
-    char *deviceName; /* non-const ptr */
+    TCHAR *deviceName; /* non-const ptr */
     MMRESULT mmresult;
-    WAVEINCAPSW wic;
+    WAVEINCAPS2 wic;
     PaDeviceInfo *deviceInfo = &winMmeDeviceInfo->inheritedDeviceInfo;
     size_t len;
 
     *success = 0;
 
-    mmresult = waveInGetDevCapsW( winMmeInputDeviceId, &wic, sizeof( WAVEINCAPSW ) );
+    mmresult = waveInGetDevCaps( winMmeInputDeviceId, (LPWAVEINCAPS)&wic, sizeof( wic ) );//added by bdr
     if( mmresult == MMSYSERR_NOMEM )
     {
         result = paInsufficientMemory;
@@ -698,8 +698,11 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
     if( winMmeInputDeviceId == WAVE_MAPPER )
     {
         len = WCharStringLen( wic.szPname ) + 1 + sizeof(constInputMapperSuffix_);
+
+        len = (_tcslen( wic.szPname ) + 1 + sizeof(constInputMapperSuffix_))*sizeof(TCHAR);
+        
         /* Append I/O suffix to WAVE_MAPPER device. */
-        deviceName = (char*)PaUtil_GroupAllocateMemory(
+        deviceName = PaUtil_GroupAllocateMemory(
                     winMmeHostApi->allocations,
                     (long)len );
         if( !deviceName )
@@ -707,13 +710,14 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
             result = paInsufficientMemory;
             goto error;
         }
-        CopyWCharStringToUtf8CString( deviceName, len, wic.szPname );
-        strcat( deviceName, constInputMapperSuffix_ );
+        _tcscpy( deviceName, wic.szPname );
+        _tcscat( deviceName, constInputMapperSuffix_ );
     }
     else
     {
-        len = WCharStringLen( wic.szPname ) + 1;
-        deviceName = (char*)PaUtil_GroupAllocateMemory(
+        len = (_tcslen( wic.szPname ) + 1) * sizeof(TCHAR);
+
+        deviceName = PaUtil_GroupAllocateMemory(
                     winMmeHostApi->allocations,
                     (long)len );
         if( !deviceName )
@@ -721,7 +725,7 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
             result = paInsufficientMemory;
             goto error;
         }
-        CopyWCharStringToUtf8CString( deviceName, len, wic.szPname  );
+        _tcscpy( deviceName, wic.szPname  );
     }
     deviceInfo->name = deviceName;
 
@@ -736,7 +740,7 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
          * see also InitializeOutputDeviceInfo() below.
      */
 
-        PA_DEBUG(("Pa_GetDeviceInfo: Num input channels reported as %d! Changed to 2.\n", wic.wChannels ));
+        PA_DEBUG((_T("Pa_GetDeviceInfo: Num input channels reported as %d! Changed to 2.\n"), wic.wChannels ));
         deviceInfo->maxInputChannels = 2;
         winMmeDeviceInfo->deviceInputChannelCountIsKnown = 0;
     }else{
@@ -754,6 +758,16 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
     DetectDefaultSampleRate( winMmeDeviceInfo, winMmeInputDeviceId,
             QueryInputWaveFormatEx, deviceInfo->maxInputChannels );
 
+    if(memcmp(&wic.NameGuid, &GUID_NULL, sizeof(wic.NameGuid)) != 0)
+    {
+        WCHAR GUIDstr[100] = {0};
+        TCHAR* ptrName = (TCHAR*)PaUtil_GroupAllocateMemory(winMmeHostApi->allocations, 100 * sizeof(TCHAR));
+        StringFromGUID2(&wic.NameGuid, GUIDstr, 100);
+        deviceInfo->uniqueID = ptrName;
+        if(deviceInfo->uniqueID)
+            _tcsncpy(ptrName, GUIDstr, 100);
+    } 
+    deviceInfo->wavedeviceid = winMmeInputDeviceId;
     *success = 1;
 
 error:
@@ -802,9 +816,9 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
         PaWinMmeDeviceInfo *winMmeDeviceInfo, UINT winMmeOutputDeviceId, int *success )
 {
     PaError result = paNoError;
-    char *deviceName; /* non-const ptr */
+    TCHAR *deviceName; /* non-const ptr */
     MMRESULT mmresult;
-    WAVEOUTCAPSW woc;
+    WAVEOUTCAPS2 woc;
     PaDeviceInfo *deviceInfo = &winMmeDeviceInfo->inheritedDeviceInfo;
     size_t len;
 #ifdef PAWIN_USE_WDMKS_DEVICE_INFO
@@ -813,7 +827,7 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
 
     *success = 0;
 
-    mmresult = waveOutGetDevCapsW( winMmeOutputDeviceId, &woc, sizeof( WAVEOUTCAPSW ) );
+    mmresult = waveOutGetDevCaps( winMmeOutputDeviceId, (LPWAVEOUTCAPS)&woc, sizeof( woc ) );
     if( mmresult == MMSYSERR_NOMEM )
     {
         result = paInsufficientMemory;
@@ -834,8 +848,8 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
     if( winMmeOutputDeviceId == WAVE_MAPPER )
     {
         /* Append I/O suffix to WAVE_MAPPER device. */
-        len = WCharStringLen( woc.szPname ) + 1 + sizeof(constOutputMapperSuffix_);
-        deviceName = (char*)PaUtil_GroupAllocateMemory(
+        len = (_tcslen( woc.szPname ) + 1 + sizeof(constOutputMapperSuffix_)) * sizeof(TCHAR);
+        deviceName = PaUtil_GroupAllocateMemory(
                     winMmeHostApi->allocations,
                     (long)len );
         if( !deviceName )
@@ -843,13 +857,13 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
             result = paInsufficientMemory;
             goto error;
         }
-        CopyWCharStringToUtf8CString( deviceName, len, woc.szPname );
-        strcat( deviceName, constOutputMapperSuffix_ );
+        _tcscpy( deviceName, woc.szPname );
+        _tcscat( deviceName, constOutputMapperSuffix_ );
     }
     else
     {
-        len = WCharStringLen( woc.szPname ) + 1;
-        deviceName = (char*)PaUtil_GroupAllocateMemory(
+        len = (_tcslen( woc.szPname ) + 1) * sizeof(TCHAR);
+        deviceName = PaUtil_GroupAllocateMemory(
                     winMmeHostApi->allocations,
                     (long)len );
         if( !deviceName )
@@ -857,7 +871,7 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
             result = paInsufficientMemory;
             goto error;
         }
-        CopyWCharStringToUtf8CString( deviceName, len, woc.szPname );
+        _tcscpy( deviceName, woc.szPname  );
     }
     deviceInfo->name = deviceName;
 
@@ -872,7 +886,7 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
          * see also InitializeInputDeviceInfo() above.
          */
 
-        PA_DEBUG(("Pa_GetDeviceInfo: Num output channels reported as %d! Changed to 2.\n", woc.wChannels ));
+        PA_DEBUG((_T("Pa_GetDeviceInfo: Num output channels reported as %d! Changed to 2.\n"), woc.wChannels ));
         deviceInfo->maxOutputChannels = 2;
         winMmeDeviceInfo->deviceOutputChannelCountIsKnown = 0;
     }else{
@@ -891,6 +905,17 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
 
     DetectDefaultSampleRate( winMmeDeviceInfo, winMmeOutputDeviceId,
             QueryOutputWaveFormatEx, deviceInfo->maxOutputChannels );
+
+    if(memcmp(&woc.NameGuid, &GUID_NULL, sizeof(woc.NameGuid)) != 0)
+    {
+        WCHAR GUIDstr[100] = {0};
+        TCHAR* ptrName = (TCHAR*)PaUtil_GroupAllocateMemory(winMmeHostApi->allocations, 100 * sizeof(TCHAR) );
+        StringFromGUID2(&woc.NameGuid, GUIDstr, 100);
+        deviceInfo->uniqueID = ptrName;
+        if(deviceInfo->uniqueID)
+            _tcsncpy(ptrName, GUIDstr, 100);
+    } 
+    deviceInfo->wavedeviceid = winMmeOutputDeviceId;
 
     *success = 1;
 
@@ -964,7 +989,7 @@ PaError PaWinMme_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiInd
     *hostApi = &winMmeHostApi->inheritedHostApiRep;
     (*hostApi)->info.structVersion = 1;
     (*hostApi)->info.type = paMME;
-    (*hostApi)->info.name = "MME";
+    (*hostApi)->info.name = _T("MME");
 
 
     /* initialise device counts and default devices under the assumption that
@@ -3398,7 +3423,7 @@ static PaError StartStream( PaStream *s )
         for( i=0; i < stream->input.deviceCount; ++i )
         {
             mmresult = waveInStart( ((HWAVEIN*)stream->input.waveHandles)[i] );
-            PA_DEBUG(("Pa_StartStream: waveInStart returned = 0x%X.\n", mmresult));
+            PA_DEBUG((_T("Pa_StartStream: waveInStart returned = 0x%X.\n"), mmresult));
             if( mmresult != MMSYSERR_NOERROR )
             {
                 result = paUnanticipatedHostError;
@@ -3460,7 +3485,7 @@ static PaError StopStream( PaStream *s )
         if( timeout < PA_MME_MIN_TIMEOUT_MSEC_ )
             timeout = PA_MME_MIN_TIMEOUT_MSEC_;
 
-        PA_DEBUG(("WinMME StopStream: waiting for background thread.\n"));
+        PA_DEBUG((_T("WinMME StopStream: waiting for background thread.\n")));
 
         waitResult = WaitForSingleObject( stream->processingThread, timeout );
         if( waitResult == WAIT_TIMEOUT )
@@ -3471,7 +3496,7 @@ static PaError StopStream( PaStream *s )
             waitResult = WaitForSingleObject( stream->processingThread, timeout );
             if( waitResult == WAIT_TIMEOUT )
             {
-                PA_DEBUG(("WinMME StopStream: timed out while waiting for background thread to finish.\n"));
+                PA_DEBUG((_T("WinMME StopStream: timed out while waiting for background thread to finish.\n")));
                 result = paTimedOut;
             }
         }
@@ -3633,7 +3658,7 @@ static PaError AbortStream( PaStream *s )
     {
         /* callback stream */
 
-        PA_DEBUG(("WinMME AbortStream: waiting for background thread.\n"));
+        PA_DEBUG((_T("WinMME AbortStream: waiting for background thread.\n")));
 
         /* Calculate timeOut longer than longest time it could take to return all buffers. */
         timeout = (int)(stream->allBuffersDurationMs * 1.5);
@@ -3643,7 +3668,7 @@ static PaError AbortStream( PaStream *s )
         waitResult = WaitForSingleObject( stream->processingThread, timeout );
         if( waitResult == WAIT_TIMEOUT )
         {
-            PA_DEBUG(("WinMME AbortStream: timed out while waiting for background thread to finish.\n"));
+            PA_DEBUG((_T("WinMME AbortStream: timed out while waiting for background thread to finish.\n")));
             return paTimedOut;
         }
 
