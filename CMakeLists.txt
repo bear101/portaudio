@@ -99,7 +99,7 @@ else()
   target_compile_definitions(PortAudio PRIVATE PA_LITTLE_ENDIAN)
 endif()
 
-if(WIN32 AND MSVC AND PA_BUILD_SHARED_LIBS
+if(WIN32 AND MSVC
   # Check if the user is building PortAudio stand-alone or as part of a larger
   # project. If this is part of a larger project (i.e. the CMakeLists.txt has
   # been imported by some other CMakeLists.txt), we don't want to override
@@ -167,6 +167,8 @@ if(WIN32)
 
   if(MSVC)
     target_sources(PortAudio PRIVATE src/os/win/pa_x86_plain_converters.c)
+    target_compile_definitions(PortAudio PUBLIC UNICODE _UNICODE)
+    set_target_properties(PortAudio PROPERTIES OUTPUT_NAME_DEBUG portaudiod)
   else()
     target_compile_definitions(PortAudio PRIVATE _WIN32_WINNT=0x0501 WINVER=0x0501)
     set(DEF_EXCLUDE_X86_PLAIN_CONVERTERS ";")
@@ -227,9 +229,10 @@ if(WIN32)
       src/hostapi/dsound/pa_win_ds.c
       src/hostapi/dsound/pa_win_ds_dynlink.c
       src/hostapi/dsound/pa_win_ds_dynlink.h
+      src/hostapi/dsound/px_win_ds.cpp
     )
     target_include_directories(PortAudio PRIVATE src/hostapi/dsound)
-    set(PORTAUDIO_PUBLIC_HEADERS "${PORTAUDIO_PUBLIC_HEADERS}" include/pa_win_ds.h)
+    set(PORTAUDIO_PUBLIC_HEADERS "${PORTAUDIO_PUBLIC_HEADERS}" include/pa_win_ds.h include/px_win_ds.h)
     target_compile_definitions(PortAudio PUBLIC PA_USE_DS=1)
     set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -DPA_USE_DS=1")
     target_link_libraries(PortAudio PRIVATE dsound)
