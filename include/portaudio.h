@@ -45,6 +45,10 @@
 */
 
 
+#if !defined(_INC_TCHAR)
+#include <tchar.h>
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -303,7 +307,7 @@ typedef struct PaHostApiInfo
     /** The well known unique identifier of this host API @see PaHostApiTypeId */
     PaHostApiTypeId type;
     /** A textual description of the host API for display on user interfaces. */
-    const char *name;
+    const TCHAR *name;
 
     /**  The number of devices belonging to this host API. This field may be
      used in conjunction with Pa_HostApiDeviceIndexToDeviceIndex() to enumerate
@@ -503,7 +507,7 @@ typedef unsigned long PaSampleFormat;
 typedef struct PaDeviceInfo
 {
     int structVersion;  /* this is struct version 2 */
-    const char *name;
+    const TCHAR *name;
     PaHostApiIndex hostApi; /**< note this is a host API index, not a type id*/
 
     int maxInputChannels;
@@ -517,6 +521,10 @@ typedef struct PaDeviceInfo
     PaTime defaultHighOutputLatency;
 
     double defaultSampleRate;
+
+    int max3dBuffers;	  //added by bdr
+    const TCHAR* uniqueID; //added by bdr
+    int wavedeviceid;     //added by bdr
 } PaDeviceInfo;
 
 
