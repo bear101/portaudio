@@ -185,7 +185,7 @@ IF(WIN32)
     SET(PA_DS_SOURCES src/hostapi/dsound/pa_win_ds.c src/hostapi/dsound/pa_win_ds_dynlink.c
         src/hostapi/dsound/px_win_ds.cpp)
     SOURCE_GROUP("hostapi\\dsound" FILES ${PA_DS_INCLUDES} ${PA_DS_SOURCES})
-    SET(PA_PUBLIC_INCLUDES ${PA_PUBLIC_INCLUDES} include/pa_win_ds.h include/pa_win_waveformat.h)
+    SET(PA_PUBLIC_INCLUDES ${PA_PUBLIC_INCLUDES} include/pa_win_ds.h include/px_win_ds.h include/pa_win_waveformat.h)
     SET(PA_PRIVATE_INCLUDES ${PA_PRIVATE_INCLUDES} ${PA_DS_INCLUDES})
     SET(PA_SOURCES ${PA_SOURCES} ${PA_DS_SOURCES})
     SET(PA_LIBRARY_DEPENDENCIES ${PA_LIBRARY_DEPENDENCIES} dsound)
