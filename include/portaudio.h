@@ -273,6 +273,7 @@ PaHostApiIndex Pa_GetDefaultHostApi( void );
 
  @see PaHostApiInfo
 */
+
 typedef enum PaHostApiTypeId
 {
     paInDevelopment=0, /* use while developing support for a new host API */
@@ -289,7 +290,9 @@ typedef enum PaHostApiTypeId
     paJACK=12,
     paWASAPI=13,
     paAudioScienceHPI=14,
-    paAudioIO=15
+    paAudioIO=15,
+    paPulseAudio=16,
+    paOboe=17
 } PaHostApiTypeId;
 
 

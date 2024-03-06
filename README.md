@@ -30,7 +30,6 @@ Please feel free to join. See http://www.portaudio.com for details.
     src/os                  = os specific (but host api neutral) code
     src/hostapi             = implementations for different host apis
 
-
 ### Host API Implementations:
 
     src/hostapi/alsa        = Advanced Linux Sound Architecture (ALSA)
@@ -40,7 +39,9 @@ Please feel free to join. See http://www.portaudio.com for details.
     src/hostapi/coreaudio   = Macintosh Core Audio for OS X
     src/hostapi/dsound      = Windows Direct Sound
     src/hostapi/jack        = JACK Audio Connection Kit
+    src/hostapi/oboe        = Oboe Library for Android (see src/hostapi/oboe/README.md)
     src/hostapi/oss         = Unix Open Sound System (OSS)
+    src/hostapi/pulseaudio  = Sound system for POSIX OSes
     src/hostapi/wasapi      = Windows Vista WASAPI
     src/hostapi/wdmks       = Windows WDM Kernel Streaming
     src/hostapi/wmme        = Windows MultiMedia Extensions (MME)
